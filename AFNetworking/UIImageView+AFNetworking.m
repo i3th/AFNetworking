@@ -143,47 +143,68 @@ static char kAFImageRequestOperationObjectKey;
 }
 
 - (void)cancelImageRequestOperation {
-    [UIImage cancelPreviousPerformRequestsWithTarget:self];
+    [[self class] cancelPreviousPerformRequestsWithTarget:self];
     [self.af_imageRequestOperation cancel];
     self.af_imageRequestOperation = nil;
 }
 
 - (void)setImageWithURL:(NSURL *)url headers:(NSDictionary *)headers timeoutInterval:(NSUInteger)timeout {
     
-    if (!url || (![self.af_imageRequestOperation isFinished] && [url isEqual:[[self.af_imageRequestOperation request] URL]])) {
-        return;
-    } else {
-        [self cancelImageRequestOperation];
-        self.af_imageRequestOperation = nil;
-    }
-    UIImage *cachedImage = [[AFImageCache sharedImageCache] cachedImageForURL:url cacheName:nil];
+//    if (!url || (![self.af_imageRequestOperation isFinished] && [url isEqual:[[self.af_imageRequestOperation request] URL]])) {
+//        return;
+//    } else {
+//        [self cancelImageRequestOperation];
+//        self.af_imageRequestOperation = nil;
+//    }
+//    
+//    NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLCacheStorageAllowed timeoutInterval:timeout?timeout:30.0];
+//    [urlRequest setAllHTTPHeaderFields:headers];
+//    [urlRequest setHTTPShouldHandleCookies:NO];
+//    [urlRequest setHTTPShouldUsePipelining:YES];
+//    UIImage *cachedImage = [[[self class] af_sharedImageCache] cachedImageForRequest:urlRequest];
+//    if (cachedImage) {
+//        self.image = cachedImage;
+//    } else {
+//        [self performSelector:@selector(scheduleRequest:) withObject:urlRequest afterDelay:0];
+//    }
+    [self cancelImageRequestOperation];
+    
+    NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLCacheStorageAllowed timeoutInterval:timeout?timeout:30.0];
+    [urlRequest setAllHTTPHeaderFields:headers];
+    [urlRequest setHTTPShouldHandleCookies:NO];
+    [urlRequest setHTTPShouldUsePipelining:YES];
+    UIImage *cachedImage = [[[self class] af_sharedImageCache] cachedImageForRequest:urlRequest];
+    
     if (cachedImage) {
         self.image = cachedImage;
+        self.af_imageRequestOperation = nil;
     } else {
-        
-        NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLCacheStorageAllowed timeoutInterval:timeout?timeout:30.0];
-        [urlRequest setAllHTTPHeaderFields:headers];
-        [urlRequest setHTTPShouldHandleCookies:NO];
-        [urlRequest setHTTPShouldUsePipelining:YES];
         [self performSelector:@selector(scheduleRequest:) withObject:urlRequest afterDelay:0];
     }
 }
 
 - (void)scheduleRequest:(id)urlRequest {
-    self.af_imageRequestOperation = [AFImageRequestOperation imageRequestOperationWithRequest:urlRequest imageProcessingBlock:nil cacheName:nil success:^(NSURLRequest *request, NSHTTPURLResponse *response, UIImage *image) {            
-        if (self.af_imageRequestOperation && ![self.af_imageRequestOperation isCancelled]) {
-            if ([[request URL] isEqual:[[self.af_imageRequestOperation request] URL]]) {
-                self.image = image;
-            }
-        }            
-    } failure:^(NSURLRequest *request, NSHTTPURLResponse *response, NSError *error) {
-        self.af_imageRequestOperation = nil;
+    AFImageRequestOperation *requestOperation = [[[AFImageRequestOperation alloc] initWithRequest:urlRequest] autorelease];
+    [requestOperation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
+        if ([[urlRequest URL] isEqual:[[self.af_imageRequestOperation request] URL]]) {
+            self.image = responseObject;
+            self.af_imageRequestOperation = nil;
+        }
+        [[[self class] af_sharedImageCache] cacheImage:responseObject forRequest:urlRequest];
+    } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+        if ([[urlRequest URL] isEqual:[[self.af_imageRequestOperation request] URL]]) {
+            self.af_imageRequestOperation = nil;
+        }
+        
     }];
+    
+    self.af_imageRequestOperation = requestOperation;
     
     [[[self class] af_sharedImageRequestOperationQueue] addOperation:self.af_imageRequestOperation];
 }
 
 @end
+
 
 #pragma mark -
 
