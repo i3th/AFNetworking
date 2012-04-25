@@ -149,24 +149,6 @@ static char kAFImageRequestOperationObjectKey;
 }
 
 - (void)setImageWithURL:(NSURL *)url headers:(NSDictionary *)headers timeoutInterval:(NSUInteger)timeout {
-    
-//    if (!url || (![self.af_imageRequestOperation isFinished] && [url isEqual:[[self.af_imageRequestOperation request] URL]])) {
-//        return;
-//    } else {
-//        [self cancelImageRequestOperation];
-//        self.af_imageRequestOperation = nil;
-//    }
-//    
-//    NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLCacheStorageAllowed timeoutInterval:timeout?timeout:30.0];
-//    [urlRequest setAllHTTPHeaderFields:headers];
-//    [urlRequest setHTTPShouldHandleCookies:NO];
-//    [urlRequest setHTTPShouldUsePipelining:YES];
-//    UIImage *cachedImage = [[[self class] af_sharedImageCache] cachedImageForRequest:urlRequest];
-//    if (cachedImage) {
-//        self.image = cachedImage;
-//    } else {
-//        [self performSelector:@selector(scheduleRequest:) withObject:urlRequest afterDelay:0];
-//    }
     [self cancelImageRequestOperation];
     
     NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLCacheStorageAllowed timeoutInterval:timeout?timeout:30.0];
